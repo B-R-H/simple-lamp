@@ -1,2 +1,3 @@
-**.tfstate*
-**/.terrafrom/**
+*.tfstate*
+**/.terrafrom/*
+.terrafrom.*
