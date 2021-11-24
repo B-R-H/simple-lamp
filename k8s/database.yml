@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data
+  namespace: frontend
+  labels:
+    app: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data
+  template:
+    metadata:
+      labels:
+        app: data
+    spec:
+      containers:
+      - name: data
+        image: 002408418408.dkr.ecr.eu-west-2.amazonaws.com/lampsql:latest 
+        ports:
+        - name: mysql-port
+          containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: password
+      imagePullSecrets:
+      - name: regcred
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: data
+  namespace: frontend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3306
+  selector:
+    app: data

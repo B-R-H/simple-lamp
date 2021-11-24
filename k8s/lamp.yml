@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: frontend
+  labels:
+    app: frontend
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: 002408418408.dkr.ecr.eu-west-2.amazonaws.com/lamp:latest 
+        ports:
+        - name: http-port
+          containerPort: 80
+      imagePullSecrets:
+      - name: regcred
+       
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: frontend
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+  selector:
+    app: frontend
