@@ -12,3 +12,8 @@ variable "registries" {
     type = list(string)
     default = [ "lamp","lampsql" ]
 }
+
+variable "vpc-cidr" {
+  type = string
+  default = "10.2.0.0/16"
+}

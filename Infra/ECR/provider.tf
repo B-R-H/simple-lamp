@@ -7,7 +7,7 @@ terraform {
   }
   backend "s3" {
     bucket = "my-tf-test-bucket-testing"
-    key    = "global/s3/container-project/terraform.tfstate"
+    key    = "global/s3/container-project/ECR/terraform.tfstate"
     region = "eu-west-2"
 
     dynamodb_table = "terraform-up-and-runing-state-locks"
