@@ -10,7 +10,7 @@ variable "env-tag" {
 
 variable "registries" {
     type = list(string)
-    default = [ "lamp","lampsql" ]
+    default = [ "lamp","lampsql","flamp" ]
 }
 
 variable "vpc-cidr" {

@@ -16,3 +16,8 @@ variable "subnet-count" {
   type    = number
   default = 2
 }
+
+variable "app-count" {
+    type = number
+    default = 1
+}
