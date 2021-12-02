@@ -1,4 +1,4 @@
-resource "aws_vpc" "ECS-VPC" {
+resource "aws_vpc" "default_vpc" {
   cidr_block = var.vpc-cidr
   tags = {
     Name = "ECSVPC"
@@ -6,39 +6,50 @@ resource "aws_vpc" "ECS-VPC" {
   }
 }
 
-resource "aws_security_group" "lamp-sg" {
-    name = "lampsg"
-    description = "security group for lamp app in ECS"
-  tags = {
-    Name = "lampsg"
-    Enviroment = var.env-tag
-  }
-}
-
-resource "aws_subnet" "public" {
+resource "aws_subnet" "default_subnets" {
+  vpc_id = aws_vpc.default_vpc.id
   count = var.subnet-count
-  cidr_block = cidrsubnet(aws_vpc.ECS-VPC.cidr_block, 4, 0+count.index)
-  availability_zone       = data.aws_availability_zones.available_zones.names[count.index]
-  vpc_id = aws_vpc.ECS-VPC.id
-  tags = {
-    Name = "public${count.index+1}"
-    Enviroment = var.env-tag
+  cidr_block = cidrsubnet(aws_vpc.default_vpc.cidr_block, 7, 0+count.index)
+  availability_zone = data.aws_availability_zones.available_zones.names[count.index%length(data.aws_availability_zones.available_zones.names)]
+}
+
+resource "aws_security_group" "service_security_group" {
+  vpc_id = aws_vpc.default_vpc.id
+  ingress {
+    from_port = 0
+    to_port   = 0
+    protocol  = "-1"
+    # Only allowing traffic in from the load balancer security group
+    security_groups = ["${aws_security_group.load_balancer_security_group.id}"]
+  }
+
+  egress {
+    from_port   = 0 # Allowing any incoming port
+    to_port     = 0 # Allowing any outgoing port
+    protocol    = "-1" # Allowing any outgoing protocol 
+    cidr_blocks = ["0.0.0.0/0"] # Allowing traffic out to all IP addresses
   }
 }
 
-resource "aws_subnet" "private" {
-  count             = var.subnet-count
-  cidr_block        = cidrsubnet(aws_vpc.ECS-VPC.cidr_block, 4, var.subnet-count + count.index)
-  availability_zone = data.aws_availability_zones.available_zones.names[count.index]
-  vpc_id            = aws_vpc.ECS-VPC.id
-  tags = {
-    Name = "peivate${count.index+1}"
-    Enviroment = var.env-tag
+resource "aws_security_group" "load_balancer_security_group" {
+  vpc_id = aws_vpc.default_vpc.id
+  ingress {
+    from_port   = 80 # Allowing traffic in from port 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allowing traffic in from all sources
+  }
+
+  egress {
+    from_port   = 0 # Allowing any incoming port
+    to_port     = 0 # Allowing any outgoing port
+    protocol    = "-1" # Allowing any outgoing protocol 
+    cidr_blocks = ["0.0.0.0/0"] # Allowing traffic out to all IP addresses
   }
 }
 
 resource "aws_internet_gateway" "gateway" {
-  vpc_id = aws_vpc.ECS-VPC.id
+  vpc_id = aws_vpc.default_vpc.id
   tags = {
     Name = "Gateway"
     Enviroment = var.env-tag
@@ -46,7 +57,7 @@ resource "aws_internet_gateway" "gateway" {
 }
 
 resource "aws_route" "internet_access" {
-  route_table_id         = aws_vpc.ECS-VPC.main_route_table_id
+  route_table_id         = aws_vpc.default_vpc.main_route_table_id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.gateway.id
 }
@@ -57,59 +68,6 @@ resource "aws_eip" "gateway" {
   depends_on = [aws_internet_gateway.gateway]
   tags = {
     Name = "lampIP"
-    Enviroment = var.env-tag
-  }
-}
-
-resource "aws_nat_gateway" "gateway" {
-  count         = var.subnet-count
-  subnet_id     = element(aws_subnet.public.*.id, count.index)
-  allocation_id = element(aws_eip.gateway.*.id, count.index)
-  tags = {
-    Name = "NatGate${count.index+1}"
-    Enviroment = var.env-tag
-  }
-}
-
-resource "aws_route_table" "private" {
-  count  = var.subnet-count
-  vpc_id = aws_vpc.ECS-VPC.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    nat_gateway_id = element(aws_nat_gateway.gateway.*.id, count.index)
-  }
-  tags = {
-    Name = "ECSRoute"
-    Enviroment = var.env-tag
-  }
-}
-
-resource "aws_route_table_association" "private" {
-  count          = var.subnet-count
-  subnet_id      = element(aws_subnet.private.*.id, count.index)
-  route_table_id = element(aws_route_table.private.*.id, count.index)
-}
-
-resource "aws_security_group" "lb" {
-  name        = "example-alb-security-group"
-  vpc_id      = aws_vpc.ECS-VPC.id
-
-  ingress {
-    protocol    = "tcp"
-    from_port   = 80
-    to_port     = 80
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "lbsg"
     Enviroment = var.env-tag
   }
 }
