@@ -1,5 +1,5 @@
 resource "aws_lb" "application_load_balancer" {
-  name               = "test-lb-tf" # Naming our load balancer
+  name               = "lamp-lb-tf" # Naming our load balancer
   load_balancer_type = "application"
   subnets = aws_subnet.default_subnets.*.id
   # Referencing the security group
@@ -13,7 +13,7 @@ resource "aws_lb_target_group" "target_group" {
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = "${aws_vpc.default_vpc.id}" # Referencing the default VPC
+  vpc_id      = "${aws_vpc.default_vpc.id}" 
   health_check {
     matcher = "200,301,302"
     path = "/app/index.php"

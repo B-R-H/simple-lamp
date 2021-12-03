@@ -11,6 +11,10 @@ resource "aws_subnet" "default_subnets" {
   count = var.subnet-count
   cidr_block = cidrsubnet(aws_vpc.default_vpc.cidr_block, 7, 0+count.index)
   availability_zone = data.aws_availability_zones.available_zones.names[count.index%length(data.aws_availability_zones.available_zones.names)]
+  tags = {
+    Name = "public${count.index +1}"
+    Enviroment = var.env-tag
+  }
 }
 
 resource "aws_security_group" "service_security_group" {
@@ -29,6 +33,10 @@ resource "aws_security_group" "service_security_group" {
     protocol    = "-1" # Allowing any outgoing protocol 
     cidr_blocks = ["0.0.0.0/0"] # Allowing traffic out to all IP addresses
   }
+  tags = {
+    Name = "lbToBack"
+    Enviroment = var.env-tag
+  }
 }
 
 resource "aws_security_group" "load_balancer_security_group" {
@@ -45,6 +53,10 @@ resource "aws_security_group" "load_balancer_security_group" {
     to_port     = 0 # Allowing any outgoing port
     protocol    = "-1" # Allowing any outgoing protocol 
     cidr_blocks = ["0.0.0.0/0"] # Allowing traffic out to all IP addresses
+  }
+  tags = {
+    Name = "lb to internet"
+    Enviroment = var.env-tag
   }
 }
 
