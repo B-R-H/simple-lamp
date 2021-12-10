@@ -12,7 +12,7 @@ variable "vpc-cidr" {
   default = "10.0.0.0/16"
 }
 
-variable "subnet-count" {
+variable "subnet_count" {
   type    = number
   default = 3
 }
@@ -23,16 +23,16 @@ variable "app-count" {
 }
 
 variable "container-port" {
-  type = number 
-  default = 80
+  type = list(number) 
+  default = [80,3306]
 }
 
 variable "container-memory" {
-  type = number
-  default = 512
+  type = list(number)
+  default = [512,512]
 }
 
 variable "container-cpu" {
-  type = number
-  default = 256
+  type = list(number)
+  default = [256,256]
 }

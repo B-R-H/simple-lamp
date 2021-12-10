@@ -8,11 +8,22 @@ resource "aws_vpc" "default_vpc" {
 
 resource "aws_subnet" "default_subnets" {
   vpc_id = aws_vpc.default_vpc.id
-  count = var.subnet-count
-  cidr_block = cidrsubnet(aws_vpc.default_vpc.cidr_block, 7, 0+count.index)
+  count = var.subnet_count
+  cidr_block = cidrsubnet(aws_vpc.default_vpc.cidr_block, 7, count.index)
   availability_zone = data.aws_availability_zones.available_zones.names[count.index%length(data.aws_availability_zones.available_zones.names)]
   tags = {
     Name = "public${count.index +1}"
+    Enviroment = var.env-tag
+  }
+}
+
+resource "aws_subnet" "private_subnets" {
+  vpc_id = aws_vpc.default_vpc.id
+  count = var.subnet_count
+  cidr_block = cidrsubnet(aws_vpc.default_vpc.cidr_block, 7, var.subnet_count+count.index)
+  availability_zone = data.aws_availability_zones.available_zones.names[count.index%length(data.aws_availability_zones.available_zones.names)]
+  tags = {
+    Name = "private${count.index +1}"
     Enviroment = var.env-tag
   }
 }
@@ -72,14 +83,4 @@ resource "aws_route" "internet_access" {
   route_table_id         = aws_vpc.default_vpc.main_route_table_id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.gateway.id
-}
-
-resource "aws_eip" "gateway" {
-  count      = var.subnet-count
-  vpc        = true
-  depends_on = [aws_internet_gateway.gateway]
-  tags = {
-    Name = "lampIP"
-    Enviroment = var.env-tag
-  }
 }

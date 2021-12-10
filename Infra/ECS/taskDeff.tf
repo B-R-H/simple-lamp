@@ -4,23 +4,29 @@ resource "aws_ecs_task_definition" "my_first_task" {
   [
     {
       "name": "flampapp",
-      "image": "${data.terraform_remote_state.ECR.outputs.registry_url[2]}",
+      "image": "${data.terraform_remote_state.ECR.outputs.registry_url[0]}",
+      "environment": [
+        {
+        "name": "DATABASE_URL",
+        "value": "test"
+        }
+      ],
       "essential": true,
       "portMappings": [
         {
-          "containerPort": ${var.container-port},
-          "hostPort": ${var.container-port}
+          "containerPort": ${var.container-port[0]},
+          "hostPort": ${var.container-port[0]}
         }
       ],
-      "memory": ${tostring(var.container-memory)},
-      "cpu": ${tostring(var.container-cpu)}
+      "memory": ${tostring(var.container-memory[0])},
+      "cpu": ${tostring(var.container-cpu[0])}
     }
   ]
   DEFINITION
   requires_compatibilities = ["FARGATE"] # Stating that we are using ECS Fargate
   network_mode             = "awsvpc"    # Using awsvpc as our network mode as this is required for Fargate
-  memory                   = var.container-memory   
-  cpu                      = var.container-cpu
+  memory                   = var.container-memory[0]   
+  cpu                      = var.container-cpu[0]
   execution_role_arn       = "${aws_iam_role.ecsTaskExecutionRole.arn}"
   tags = {
     Name = "flampTask"
@@ -28,8 +34,44 @@ resource "aws_ecs_task_definition" "my_first_task" {
   }
 }
 
+resource "aws_ecs_task_definition" "database" {
+  family                   = "database"
+  container_definitions    = <<DEFINITION
+  [
+    {
+      "name": "database",
+      "image": "${data.terraform_remote_state.ECR.outputs.registry_url[1]}",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": ${var.container-port[1]},
+          "hostPort": ${var.container-port[1]}
+        }
+      ],
+      "environment": [
+        {
+        "name": "MYSQL_RANDOM_ROOT_PASSWORD",
+        "value": "true"
+        }
+      ],
+      "memory": ${tostring(var.container-memory[1])},
+      "cpu": ${tostring(var.container-cpu[1])}
+    }
+  ]
+  DEFINITION
+  requires_compatibilities = ["FARGATE"] # Stating that we are using ECS Fargate
+  network_mode             = "awsvpc"    # Using awsvpc as our network mode as this is required for Fargate
+  memory                   = var.container-memory[1]   
+  cpu                      = var.container-cpu[1]
+  execution_role_arn       = "${aws_iam_role.ecsTaskExecutionRole.arn}"
+  tags = {
+    Name = "databaseTask"
+    Enviroment = var.env-tag
+  }
+}
+
 resource "aws_ecs_service" "my_first_service" {
-  name            = "flamp-service"
+  name            = "lamp-service"
   cluster         = "${aws_ecs_cluster.my_cluster.id}"             # Referencing our created Cluster
   task_definition = "${aws_ecs_task_definition.my_first_task.arn}" # Referencing the task our service will spin up
   launch_type     = "FARGATE"
@@ -38,7 +80,7 @@ resource "aws_ecs_service" "my_first_service" {
   load_balancer {
     target_group_arn = "${aws_lb_target_group.target_group.arn}" # Referencing our target group
     container_name   = "${aws_ecs_task_definition.my_first_task.family}"
-    container_port   = var.container-port # Specifying the container port
+    container_port   = var.container-port[0] # Specifying the container port
   }
 
   network_configuration {
@@ -47,7 +89,24 @@ resource "aws_ecs_service" "my_first_service" {
     security_groups  = ["${aws_security_group.service_security_group.id}"] # Setting the security group
   }
   tags = {
-    Name = "flampService"
+    Name = "lampService"
+    Enviroment = var.env-tag
+  }
+}
+
+resource "aws_ecs_service" "database_service" {
+  name            = "database-service"
+  cluster         = "${aws_ecs_cluster.my_cluster.id}"             # Referencing our created Cluster
+  task_definition = "${aws_ecs_task_definition.database.arn}" # Referencing the task our service will spin up
+  launch_type     = "FARGATE"
+  desired_count   = 1
+
+  network_configuration {
+    subnets          = aws_subnet.default_subnets.*.id
+    security_groups  = ["${aws_security_group.service_security_group.id}"] # Setting the security group
+  }
+  tags = {
+    Name = "databaseService"
     Enviroment = var.env-tag
   }
 }
